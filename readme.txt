@@ -1,6 +1,6 @@
 === FilterFlow Posts ===
 Contributors: ilfarhanahmed
-Tags: elementor, posts, filter, ajax, grid, smart
+Tags: elementor, posts, filter, ajax, grid
 Requires at least: 6.5
 Tested up to: 7.0
 Requires PHP: 7.4
