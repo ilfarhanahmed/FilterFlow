@@ -263,6 +263,22 @@
 			if (this.backdrop) { this.backdrop.addEventListener('click', (event) => this.handleClick(event)); }
 			if (this.overflowMenu) { this.overflowMenu.addEventListener('click', (event) => this.handleClick(event)); this.overflowMenu.addEventListener('keydown', (event) => this.handleKeydown(event)); }
 
+			// The More button deliberately has its own direct interaction path.
+			// It is not routed through the swipe/tap handler used by category chips,
+			// because that handler can be affected by responsive re-measurements.
+			this.morePointerCandidate = null;
+			this.lastMorePointerActivation = 0;
+			this.boundMorePointerDown = (event) => this.handleMorePointerDown(event);
+			this.boundMorePointerUp = (event) => this.handleMorePointerUp(event);
+			this.boundMorePointerCancel = () => { this.morePointerCandidate = null; };
+			this.boundMoreClick = (event) => this.handleMoreClick(event);
+			if (this.moreButton) {
+				this.moreButton.addEventListener('pointerdown', this.boundMorePointerDown, true);
+				this.moreButton.addEventListener('pointerup', this.boundMorePointerUp, true);
+				this.moreButton.addEventListener('pointercancel', this.boundMorePointerCancel, true);
+				this.moreButton.addEventListener('click', this.boundMoreClick, true);
+			}
+
 			this.pointerCandidate = null;
 			this.lastPointerActivation = null;
 			this.boundWindowControlClick = (event) => this.handleWindowControlClick(event);
@@ -292,13 +308,69 @@
 			}
 		}
 
+
+		handleMorePointerDown(event) {
+			if (!this.moreButton || !event.isPrimary || event.button !== 0) {
+				return;
+			}
+
+			this.morePointerCandidate = {
+				pointerId: event.pointerId,
+				x: event.clientX,
+				y: event.clientY,
+				at: performance.now()
+			};
+		}
+
+		handleMorePointerUp(event) {
+			const candidate = this.morePointerCandidate;
+			this.morePointerCandidate = null;
+
+			if (!candidate || candidate.pointerId !== event.pointerId) {
+				return;
+			}
+
+			const distance = Math.hypot(event.clientX - candidate.x, event.clientY - candidate.y);
+			const elapsed = performance.now() - candidate.at;
+			if (distance > 12 || elapsed > 1200) {
+				return;
+			}
+
+			if (event.cancelable) {
+				event.preventDefault();
+			}
+			event.stopPropagation();
+			this.lastMorePointerActivation = performance.now();
+			this.toggleOverflow();
+		}
+
+		handleMoreClick(event) {
+			if (!this.moreButton || event.currentTarget !== this.moreButton) {
+				return;
+			}
+
+			if (event.cancelable) {
+				event.preventDefault();
+			}
+			event.stopPropagation();
+
+			// Pointer-enabled browsers dispatch a synthetic click after pointerup.
+			// The menu has already been toggled in that case, so ignore only that
+			// immediate duplicate. Keyboard-generated clicks still work normally.
+			if (performance.now() - this.lastMorePointerActivation < 700) {
+				return;
+			}
+
+			this.toggleOverflow();
+		}
+
 		getWindowControl(event) {
 			const target = event && event.target instanceof Element ? event.target : null;
 			if (!target) {
 				return null;
 			}
 
-			return target.closest('.ffp-more-trigger, .ffp-overflow-item[data-term], .ffp-chip[data-term]');
+			return target.closest('.ffp-overflow-item[data-term], .ffp-chip[data-term]');
 		}
 
 		ownsWindowControl(control) {
@@ -313,9 +385,6 @@
 		getControlKey(control) {
 			if (!control) {
 				return '';
-			}
-			if (control.matches('.ffp-more-trigger')) {
-				return 'more';
 			}
 			return `${control.classList.contains('ffp-overflow-item') ? 'overflow' : 'chip'}:${control.dataset.term || '0'}`;
 		}
@@ -347,10 +416,6 @@
 				this.lastPointerActivation = { key, at: performance.now() };
 			}
 
-			if (control.matches('.ffp-more-trigger')) {
-				this.toggleOverflow();
-				return true;
-			}
 
 			if (control.matches('.ffp-overflow-item[data-term]')) {
 				this.selectTerm(Number(control.dataset.term || 0), true);
@@ -439,6 +504,14 @@
 				window.removeEventListener('pointerup', this.boundWindowPointerUp, true);
 				window.removeEventListener('pointercancel', this.boundWindowPointerCancel, true);
 				this.boundWindowControlClick = null;
+			}
+
+			if (this.moreButton && this.boundMoreClick) {
+				this.moreButton.removeEventListener('pointerdown', this.boundMorePointerDown, true);
+				this.moreButton.removeEventListener('pointerup', this.boundMorePointerUp, true);
+				this.moreButton.removeEventListener('pointercancel', this.boundMorePointerCancel, true);
+				this.moreButton.removeEventListener('click', this.boundMoreClick, true);
+				this.boundMoreClick = null;
 			}
 		}
 
@@ -534,12 +607,6 @@
 				return;
 			}
 
-			const moreTrigger = event.target.closest('.ffp-more-trigger');
-			if (moreTrigger && this.root.contains(moreTrigger)) {
-				event.preventDefault();
-				this.toggleOverflow();
-				return;
-			}
 
 			if (event.target.closest('.ffp-mobile-filter-trigger, .ffp-tablet-select-trigger')) {
 				event.preventDefault();
@@ -684,8 +751,14 @@
 		}
 
 		fitFiltersToWidth(maximumVisible) {
+			const keepOverflowOpen = Boolean(
+				this.overflowMenu
+				&& !this.overflowMenu.hidden
+				&& this.moreButton
+				&& this.moreButton.getAttribute('aria-expanded') === 'true'
+			);
+
 			this.resetDesktopChipVisibility();
-			this.closeOverflow();
 			this.overflowMenu.replaceChildren();
 			this.moreButton.hidden = false;
 			this.moreButton.style.visibility = 'hidden';
@@ -705,6 +778,7 @@
 			if (available > 0 && totalWidth <= available && countFits) {
 				this.moreButton.hidden = true;
 				this.moreButton.style.visibility = '';
+				this.closeOverflow();
 				return;
 			}
 
@@ -763,7 +837,21 @@
 
 			if (!overflowed.length) {
 				this.closeOverflow();
+			} else if (keepOverflowOpen) {
+				this.setOverflowOpen(true);
+				window.requestAnimationFrame(() => this.positionOverflowMenu());
 			}
+		}
+
+		setOverflowOpen(open) {
+			if (!this.moreButton || !this.overflowMenu) {
+				return;
+			}
+
+			const shouldOpen = Boolean(open) && !this.moreButton.hidden && this.overflowMenu.children.length > 0;
+			this.overflowMenu.hidden = !shouldOpen;
+			this.overflowMenu.classList.toggle('is-open', shouldOpen);
+			this.moreButton.setAttribute('aria-expanded', shouldOpen ? 'true' : 'false');
 		}
 
 		toggleOverflow() {
@@ -771,11 +859,10 @@
 				return;
 			}
 
-			const opening = this.overflowMenu.hidden;
-			this.overflowMenu.hidden = !opening;
-			this.moreButton.setAttribute('aria-expanded', opening ? 'true' : 'false');
+			const opening = this.overflowMenu.hidden || !this.overflowMenu.classList.contains('is-open');
+			this.setOverflowOpen(opening);
 
-			if (opening) {
+			if (opening && !this.overflowMenu.hidden) {
 				this.positionOverflowMenu();
 				window.requestAnimationFrame(() => this.positionOverflowMenu());
 				const first = this.overflowMenu.querySelector('button');
@@ -786,11 +873,7 @@
 		}
 
 		closeOverflow() {
-			if (!this.moreButton || !this.overflowMenu) {
-				return;
-			}
-			this.overflowMenu.hidden = true;
-			this.moreButton.setAttribute('aria-expanded', 'false');
+			this.setOverflowOpen(false);
 		}
 
 		selectTerm(termId, shouldLoad) {

@@ -95,7 +95,14 @@ When the optional author avatar is enabled, the plugin uses WordPress core get_a
 
 == Changelog ==
 
+= 1.0.0 — Build 20260804.1430 =
+* Moved category badge placement controls into a dedicated Content tab section.
+* Added above-image and nine-point image-overlay placement options.
+* Fixed left, center, and right alignment for non-overlay category badges.
+* Added overlay edge-offset and above-image padding controls.
+
 = 1.0.0 =
+* Internal build 20260804.1425 gives the More button a direct event path and preserves an open overflow menu during responsive layout measurements.
 * Internal build 20260804.1410 adds reliable compact-width chip and More-menu interactions plus asset cache busting.
 
 * Initial public release.

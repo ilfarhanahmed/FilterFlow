@@ -13,7 +13,7 @@ class Renderer {
 		$allowed_excerpt_sources = array( 'smart', 'manual', 'wordpress' );
 		$allowed_title_tags     = array( 'h2', 'h3', 'h4', 'h5', 'h6', 'div' );
 		$allowed_date_sources   = array( 'published', 'modified' );
-		$allowed_badge_positions = array( 'content', 'image-top-left', 'image-top-right', 'image-bottom-left', 'image-bottom-right' );
+		$allowed_badge_positions = array( 'above-image', 'content', 'image-top-left', 'image-top-center', 'image-top-right', 'image-middle-left', 'image-center', 'image-middle-right', 'image-bottom-left', 'image-bottom-center', 'image-bottom-right' );
 
 		$scalar = static function ( $value, string $default = '' ): string {
 			return is_scalar( $value ) ? (string) $value : $default;
@@ -154,18 +154,31 @@ class Renderer {
 		$author_name = $author_id ? (string) get_the_author_meta( 'display_name', $author_id ) : '';
 		$has_meta    = $settings['show_author'] || $settings['show_date'] || $settings['show_reading_time'] || $settings['show_comments'];
 		?>
-		<article class="ffp-card ffp-card--badge-<?php echo esc_attr( $settings['badge_position'] ); ?>">
-			<?php if ( $settings['show_image'] && has_post_thumbnail( $post_id ) ) : ?>
+		<?php
+		$has_image        = $settings['show_image'] && has_post_thumbnail( $post_id );
+		$badge_position   = $settings['badge_position'];
+		$overlay_position = 0 === strpos( $badge_position, 'image-' );
+		?>
+		<article class="ffp-card ffp-card--badge-<?php echo esc_attr( $badge_position ); ?>">
+			<?php if ( $settings['show_badge'] && 'above-image' === $badge_position && $has_image ) : ?>
+				<?php self::render_badges( $categories, $settings, 'above-image' ); ?>
+			<?php endif; ?>
+
+			<?php if ( $has_image ) : ?>
 				<div class="ffp-card__media">
 					<a class="ffp-card__image" href="<?php echo esc_url( $permalink ); ?>" aria-label="<?php echo esc_attr( $title ); ?>"<?php if ( $settings['open_new_tab'] ) : ?> target="_blank" rel="noopener noreferrer"<?php endif; ?>>
 						<?php echo wp_kses_post( get_the_post_thumbnail( $post_id, $settings['image_size'], array( 'loading' => 'lazy', 'decoding' => 'async' ) ) ); ?>
 					</a>
-					<?php if ( $settings['show_badge'] && 'content' !== $settings['badge_position'] ) : self::render_badges( $categories, $settings, true ); endif; ?>
+					<?php if ( $settings['show_badge'] && $overlay_position ) : ?>
+						<?php self::render_badges( $categories, $settings, 'overlay' ); ?>
+					<?php endif; ?>
 				</div>
 			<?php endif; ?>
 
 			<div class="ffp-card__body">
-				<?php if ( $settings['show_badge'] && ( 'content' === $settings['badge_position'] || ! $settings['show_image'] || ! has_post_thumbnail( $post_id ) ) ) : self::render_badges( $categories, $settings, false ); endif; ?>
+				<?php if ( $settings['show_badge'] && ( 'content' === $badge_position || ! $has_image ) ) : ?>
+					<?php self::render_badges( $categories, $settings, 'content' ); ?>
+				<?php endif; ?>
 
 				<<?php echo esc_attr( $title_tag ); ?> class="ffp-card__title">
 					<a href="<?php echo esc_url( $permalink ); ?>"<?php if ( $settings['open_new_tab'] ) : ?> target="_blank" rel="noopener noreferrer"<?php endif; ?>><?php echo esc_html( $title ); ?></a>
@@ -248,11 +261,14 @@ class Renderer {
 	 * 3. Post content with heading elements removed.
 	 * 4. WordPress's generated excerpt as a final fallback.
 	 */
-	private static function render_badges( array $categories, array $settings, bool $overlay ): void {
+	private static function render_badges( array $categories, array $settings, string $context = 'content' ): void {
 		if ( empty( $categories ) ) { return; }
-		$visible = $settings['badge_limit'] > 0 ? array_slice( $categories, 0, $settings['badge_limit'] ) : $categories;
+		$visible         = $settings['badge_limit'] > 0 ? array_slice( $categories, 0, $settings['badge_limit'] ) : $categories;
+		$allowed_context = array( 'content', 'above-image', 'overlay' );
+		$context         = in_array( $context, $allowed_context, true ) ? $context : 'content';
+		$classes         = 'ffp-card__badges ffp-card__badges--' . $context;
 		?>
-		<div class="ffp-card__badges<?php echo $overlay ? ' ffp-card__badges--overlay' : ''; ?>" aria-label="<?php echo esc_attr__( 'Categories', 'filterflow-posts' ); ?>">
+		<div class="<?php echo esc_attr( $classes ); ?>" aria-label="<?php echo esc_attr__( 'Categories', 'filterflow-posts' ); ?>">
 			<?php foreach ( $visible as $category ) : ?>
 				<?php if ( $settings['link_badges'] ) : ?><a class="ffp-card__badge ffp-card__badge--term-<?php echo esc_attr( $category->term_id ); ?>" data-term="<?php echo esc_attr( $category->term_id ); ?>" href="<?php echo esc_url( get_category_link( $category ) ); ?>"><?php echo esc_html( $category->name ); ?></a>
 				<?php else : ?><span class="ffp-card__badge ffp-card__badge--term-<?php echo esc_attr( $category->term_id ); ?>" data-term="<?php echo esc_attr( $category->term_id ); ?>"><?php echo esc_html( $category->name ); ?></span><?php endif; ?>

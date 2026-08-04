@@ -598,50 +598,6 @@ class Widget extends Widget_Base {
 			)
 		);
 
-		$this->add_control( 'show_badge', $this->switcher_control( __( 'Category Badge', 'filterflow-posts' ), 'yes' ) );
-
-		$this->add_control(
-			'link_badges',
-			array(
-				'label'        => __( 'Link Badges to Categories', 'filterflow-posts' ),
-				'type'         => Controls_Manager::SWITCHER,
-				'return_value' => 'yes',
-				'default'      => '',
-				'condition'    => array( 'show_badge' => 'yes' ),
-			)
-		);
-
-		$this->add_control(
-			'badge_limit',
-			array(
-				'label'       => __( 'Maximum Category Badges', 'filterflow-posts' ),
-				'type'        => Controls_Manager::NUMBER,
-				'default'     => 0,
-				'min'         => 0,
-				'max'         => 10,
-				'description' => __( 'Use 0 to show every category assigned to the post.', 'filterflow-posts' ),
-				'condition'   => array( 'show_badge' => 'yes' ),
-			)
-		);
-
-
-		$this->add_control(
-			'badge_position',
-			array(
-				'label'     => __( 'Category Badge Position', 'filterflow-posts' ),
-				'type'      => Controls_Manager::SELECT,
-				'default'   => 'content',
-				'options'   => array(
-					'content'            => __( 'Above Post Title', 'filterflow-posts' ),
-					'image-top-left'     => __( 'Image — Top Left', 'filterflow-posts' ),
-					'image-top-right'    => __( 'Image — Top Right', 'filterflow-posts' ),
-					'image-bottom-left'  => __( 'Image — Bottom Left', 'filterflow-posts' ),
-					'image-bottom-right' => __( 'Image — Bottom Right', 'filterflow-posts' ),
-				),
-				'condition' => array( 'show_badge' => 'yes' ),
-			)
-		);
-
 		$this->add_control(
 			'card_title_tag',
 			array(
@@ -771,6 +727,77 @@ class Widget extends Widget_Base {
 		$this->add_control( 'show_comments', $this->switcher_control( __( 'Comment Count', 'filterflow-posts' ), '' ) );
 		$this->add_control( 'show_arrow', $this->switcher_control( __( 'Arrow Link', 'filterflow-posts' ), 'yes' ) );
 		$this->add_control( 'open_new_tab', $this->switcher_control( __( 'Open Posts in New Tab', 'filterflow-posts' ), '' ) );
+
+		$this->end_controls_section();
+
+		$this->start_controls_section(
+			'section_category_badges_content',
+			array( 'label' => __( 'Category Badges', 'filterflow-posts' ) )
+		);
+
+		$this->add_control(
+			'show_badge',
+			array(
+				'label'        => __( 'Show Category Badges', 'filterflow-posts' ),
+				'type'         => Controls_Manager::SWITCHER,
+				'label_on'     => __( 'Show', 'filterflow-posts' ),
+				'label_off'    => __( 'Hide', 'filterflow-posts' ),
+				'return_value' => 'yes',
+				'default'      => 'yes',
+				'render_type'  => 'template',
+			)
+		);
+
+		$this->add_control(
+			'badge_position',
+			array(
+				'label'       => __( 'Placement', 'filterflow-posts' ),
+				'type'        => Controls_Manager::SELECT,
+				'default'     => 'content',
+				'options'     => array(
+					'above-image'        => __( 'Above Featured Image', 'filterflow-posts' ),
+					'content'            => __( 'Below Image / Above Post Title', 'filterflow-posts' ),
+					'image-top-left'     => __( 'Overlay — Top Left', 'filterflow-posts' ),
+					'image-top-center'   => __( 'Overlay — Top Center', 'filterflow-posts' ),
+					'image-top-right'    => __( 'Overlay — Top Right', 'filterflow-posts' ),
+					'image-middle-left'  => __( 'Overlay — Center Left', 'filterflow-posts' ),
+					'image-center'       => __( 'Overlay — Center', 'filterflow-posts' ),
+					'image-middle-right' => __( 'Overlay — Center Right', 'filterflow-posts' ),
+					'image-bottom-left'  => __( 'Overlay — Bottom Left', 'filterflow-posts' ),
+					'image-bottom-center'=> __( 'Overlay — Bottom Center', 'filterflow-posts' ),
+					'image-bottom-right' => __( 'Overlay — Bottom Right', 'filterflow-posts' ),
+				),
+				'description' => __( 'Overlay positions are used when a featured image exists. Posts without an image automatically place badges above the post title.', 'filterflow-posts' ),
+				'condition'   => array( 'show_badge' => 'yes' ),
+				'render_type' => 'template',
+			)
+		);
+
+		$this->add_control(
+			'link_badges',
+			array(
+				'label'        => __( 'Link Badges to Categories', 'filterflow-posts' ),
+				'type'         => Controls_Manager::SWITCHER,
+				'return_value' => 'yes',
+				'default'      => '',
+				'condition'    => array( 'show_badge' => 'yes' ),
+				'render_type'  => 'template',
+			)
+		);
+
+		$this->add_control(
+			'badge_limit',
+			array(
+				'label'       => __( 'Maximum Category Badges', 'filterflow-posts' ),
+				'type'        => Controls_Manager::NUMBER,
+				'default'     => 0,
+				'min'         => 0,
+				'max'         => 10,
+				'description' => __( 'Use 0 to show every category assigned to the post.', 'filterflow-posts' ),
+				'condition'   => array( 'show_badge' => 'yes' ),
+				'render_type' => 'template',
+			)
+		);
 
 		$this->end_controls_section();
 
@@ -1361,7 +1388,7 @@ class Widget extends Widget_Base {
 		$this->add_responsive_control(
 			'badge_alignment',
 			array(
-				'label'     => __( 'Alignment', 'filterflow-posts' ),
+				'label'     => __( 'Content Alignment', 'filterflow-posts' ),
 				'type'      => Controls_Manager::CHOOSE,
 				'options'   => array(
 					'flex-start' => array( 'title' => __( 'Left', 'filterflow-posts' ), 'icon' => 'eicon-h-align-left' ),
@@ -1370,7 +1397,33 @@ class Widget extends Widget_Base {
 				),
 				'default'   => 'flex-start',
 				'toggle'    => false,
-				'selectors' => array( '{{WRAPPER}} .ffp-card__badges' => 'justify-content: {{VALUE}};' ),
+				'selectors' => array( '{{WRAPPER}} .ffp-card__badges:not(.ffp-card__badges--overlay)' => 'justify-content: {{VALUE}};' ),
+				'condition' => array( 'badge_position' => array( 'above-image', 'content' ) ),
+			)
+		);
+
+		$this->add_responsive_control(
+			'badge_overlay_inset',
+			array(
+				'label'      => __( 'Overlay Edge Offset', 'filterflow-posts' ),
+				'type'       => Controls_Manager::SLIDER,
+				'size_units' => array( 'px', 'em' ),
+				'range'      => array( 'px' => array( 'min' => 0, 'max' => 80 ) ),
+				'default'    => array( 'unit' => 'px', 'size' => 14 ),
+				'selectors'  => array( '{{WRAPPER}} .ffp-card' => '--ffp-badge-overlay-inset: {{SIZE}}{{UNIT}};' ),
+				'condition'  => array( 'badge_position!' => array( 'above-image', 'content' ) ),
+			)
+		);
+
+		$this->add_responsive_control(
+			'badge_above_image_padding',
+			array(
+				'label'      => __( 'Above-Image Container Padding', 'filterflow-posts' ),
+				'type'       => Controls_Manager::DIMENSIONS,
+				'size_units' => array( 'px', 'em', 'rem' ),
+				'default'    => array( 'top' => 18, 'right' => 22, 'bottom' => 12, 'left' => 22, 'unit' => 'px' ),
+				'selectors'  => array( '{{WRAPPER}} .ffp-card__badges--above-image' => 'padding: {{TOP}}{{UNIT}} {{RIGHT}}{{UNIT}} {{BOTTOM}}{{UNIT}} {{LEFT}}{{UNIT}};' ),
+				'condition'  => array( 'badge_position' => 'above-image' ),
 			)
 		);
 
@@ -2052,12 +2105,12 @@ class Widget extends Widget_Base {
 								<?php $this->render_filter_button( (int) $term->term_id, $term->name, false, 'ffp-chip--term', $index, (int) $term->count, $show_filter_counts, $resolved_category_icons[ (int) $term->term_id ] ?? array() ); ?>
 							<?php endforeach; ?>
 
-							<button type="button" class="ffp-chip ffp-more-trigger" aria-expanded="false" aria-haspopup="true">
+							<button type="button" class="ffp-chip ffp-more-trigger" aria-expanded="false" aria-haspopup="menu" aria-controls="<?php echo esc_attr( $widget_id . '-overflow-menu' ); ?>">
 								<span><?php echo esc_html( $settings['more_label'] ?? __( 'More', 'filterflow-posts' ) ); ?></span>
 								<svg aria-hidden="true" viewBox="0 0 24 24"><path d="m7 10 5 5 5-5"/></svg>
 							</button>
 
-							<div class="ffp-overflow-menu" role="menu" hidden></div>
+							<div id="<?php echo esc_attr( $widget_id . '-overflow-menu' ); ?>" class="ffp-overflow-menu" role="menu" hidden></div>
 						</div>
 					</div>
 				</div>
