@@ -109,7 +109,8 @@ class Renderer {
 		}
 
 		if ( $settings['exclude_current'] && $settings['current_post_id'] ) {
-			$args['post__not_in'] = array( $settings['current_post_id'] );
+			// Excluding one known post ID is bounded and prevents the current post from appearing in its own related grid.
+			$args['post__not_in'] = array( $settings['current_post_id'] ); // phpcs:ignore WordPressVIPMinimum.Performance.WPQueryParams.PostNotIn_post__not_in
 		}
 
 		/**

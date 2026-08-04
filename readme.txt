@@ -95,6 +95,9 @@ When the optional author avatar is enabled, the plugin uses WordPress core get_a
 
 == Changelog ==
 
+= 1.0.0 =
+* Internal build 20260804.1455: resolved output escaping and AJAX input sanitization scanner findings, documented the bounded current-post exclusion, and replaced logo assets with transparent-background PNG files.
+
 = 1.0.0 — Build 20260804.1430 =
 * Moved category badge placement controls into a dedicated Content tab section.
 * Added above-image and nine-point image-overlay placement options.

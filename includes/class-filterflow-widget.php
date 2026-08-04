@@ -2146,24 +2146,87 @@ class Widget extends Widget_Base {
 
 	private function render_filter_button( int $term_id, string $label, bool $active = false, string $class = '', int $index = -1, int $count = -1, bool $show_count = false, array $icon = array() ): void {
 		$count_html = $show_count && $count >= 0 ? '<span class="ffp-chip__count">' . esc_html( number_format_i18n( $count ) ) . '</span>' : '';
-		$icon_html = $this->get_filter_icon_html( $icon );
+		$icon_html  = $this->get_filter_icon_html( $icon );
 		printf(
-			'<button type="button" class="ffp-chip %1$s%2$s" data-term="%3$d" data-term-index="%4$d" data-label="%5$s" aria-pressed="%6$s">%7$s<span class="ffp-chip__label">%8$s</span>%9$s</button>',
-			esc_attr( $class ), $active ? ' is-active' : '', $term_id, $index, esc_attr( $label ), $active ? 'true' : 'false',
-			$icon_html, esc_html( $label ), $count_html
+			'<button type="button" class="ffp-chip %1$s%2$s" data-term="%3$s" data-term-index="%4$s" data-label="%5$s" aria-pressed="%6$s">%7$s<span class="ffp-chip__label">%8$s</span>%9$s</button>',
+			esc_attr( $class ),
+			$active ? ' is-active' : '',
+			esc_attr( (string) $term_id ),
+			esc_attr( (string) $index ),
+			esc_attr( $label ),
+			$active ? 'true' : 'false',
+			wp_kses( $icon_html, $this->get_filter_icon_allowed_html() ),
+			esc_html( $label ),
+			wp_kses_post( $count_html )
 		);
 	}
 
 	private function render_sheet_option( int $term_id, string $label, bool $checked, string $widget_id, int $count = -1, bool $show_count = false, array $icon = array() ): void {
-		$input_id = $widget_id . '-term-' . $term_id;
+		$input_id  = $widget_id . '-term-' . $term_id;
 		$icon_html = $this->get_filter_icon_html( $icon );
 		?>
 		<label class="ffp-sheet__option" for="<?php echo esc_attr( $input_id ); ?>">
-			<span class="ffp-sheet__option-label"><?php echo $icon_html; ?><span><?php echo esc_html( $label ); ?></span><?php if ( $show_count && $count >= 0 ) : ?><span class="ffp-sheet__count"><?php echo esc_html( number_format_i18n( $count ) ); ?></span><?php endif; ?></span>
-			<input id="<?php echo esc_attr( $input_id ); ?>" type="radio" name="<?php echo esc_attr( $widget_id . '-filter' ); ?>" value="<?php echo esc_attr( $term_id ); ?>" <?php checked( $checked ); ?>>
+			<span class="ffp-sheet__option-label"><?php echo wp_kses( $icon_html, $this->get_filter_icon_allowed_html() ); ?><span><?php echo esc_html( $label ); ?></span><?php if ( $show_count && $count >= 0 ) : ?><span class="ffp-sheet__count"><?php echo esc_html( number_format_i18n( $count ) ); ?></span><?php endif; ?></span>
+			<input id="<?php echo esc_attr( $input_id ); ?>" type="radio" name="<?php echo esc_attr( $widget_id . '-filter' ); ?>" value="<?php echo esc_attr( (string) $term_id ); ?>" <?php checked( $checked ); ?>>
 			<span class="ffp-sheet__radio" aria-hidden="true"></span>
 		</label>
 		<?php
+	}
+
+	/**
+	 * Allowed markup for built-in and Elementor-provided filter icons.
+	 *
+	 * @return array<string, array<string, bool>>
+	 */
+	private function get_filter_icon_allowed_html(): array {
+		$global_attributes = array(
+			'class'       => true,
+			'aria-hidden' => true,
+			'role'        => true,
+			'style'       => true,
+		);
+
+		return array(
+			'span'     => $global_attributes,
+			'i'        => $global_attributes,
+			'svg'      => array_merge(
+				$global_attributes,
+				array(
+					'viewbox'           => true,
+					'viewBox'           => true,
+					'focusable'         => true,
+					'xmlns'             => true,
+					'width'             => true,
+					'height'            => true,
+					'fill'              => true,
+					'stroke'            => true,
+					'stroke-width'      => true,
+					'stroke-linecap'    => true,
+					'stroke-linejoin'   => true,
+					'preserveaspectratio' => true,
+				)
+			),
+			'g'        => $global_attributes,
+			'path'     => array(
+				'class'             => true,
+				'd'                 => true,
+				'fill'              => true,
+				'fill-rule'         => true,
+				'clip-rule'         => true,
+				'stroke'            => true,
+				'stroke-width'      => true,
+				'stroke-linecap'    => true,
+				'stroke-linejoin'   => true,
+			),
+			'rect'     => array( 'x' => true, 'y' => true, 'width' => true, 'height' => true, 'rx' => true, 'ry' => true, 'fill' => true, 'stroke' => true, 'stroke-width' => true ),
+			'circle'   => array( 'cx' => true, 'cy' => true, 'r' => true, 'fill' => true, 'stroke' => true, 'stroke-width' => true ),
+			'ellipse'  => array( 'cx' => true, 'cy' => true, 'rx' => true, 'ry' => true, 'fill' => true, 'stroke' => true, 'stroke-width' => true ),
+			'line'     => array( 'x1' => true, 'y1' => true, 'x2' => true, 'y2' => true, 'stroke' => true, 'stroke-width' => true, 'stroke-linecap' => true ),
+			'polyline' => array( 'points' => true, 'fill' => true, 'stroke' => true, 'stroke-width' => true, 'stroke-linecap' => true, 'stroke-linejoin' => true ),
+			'polygon'  => array( 'points' => true, 'fill' => true, 'stroke' => true, 'stroke-width' => true, 'stroke-linejoin' => true ),
+			'use'      => array( 'href' => true, 'xlink:href' => true ),
+			'title'    => array(),
+		);
 	}
 
 	private function get_category_icon_map( $rows ): array {

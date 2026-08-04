@@ -38,10 +38,12 @@ class Ajax {
 		}
 
 		$settings = Renderer::sanitize_settings( $settings );
-		$term_value = isset( $_POST['term_id'] ) && is_scalar( $_POST['term_id'] ) ? wp_unslash( $_POST['term_id'] ) : 0;
-		$page_value = isset( $_POST['page'] ) && is_scalar( $_POST['page'] ) ? wp_unslash( $_POST['page'] ) : 1;
-		$term_id    = absint( $term_value );
-		$page       = min( 500, max( 1, absint( $page_value ) ) );
+		$term_id = isset( $_POST['term_id'] ) && is_scalar( $_POST['term_id'] )
+			? absint( wp_unslash( $_POST['term_id'] ) )
+			: 0;
+		$page = isset( $_POST['page'] ) && is_scalar( $_POST['page'] )
+			? min( 500, max( 1, absint( wp_unslash( $_POST['page'] ) ) ) )
+			: 1;
 
 		if ( $term_id && ! term_exists( $term_id, 'category' ) ) {
 			$term_id = 0;
