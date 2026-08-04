@@ -96,6 +96,7 @@ When the optional author avatar is enabled, the plugin uses WordPress core get_a
 == Changelog ==
 
 = 1.0.0 =
+* Internal build 20260804.1410 adds reliable compact-width chip and More-menu interactions plus asset cache busting.
 
 * Initial public release.
 * Added collision-safe desktop, tablet, and mobile filter layouts with automatic and manual header clearance.

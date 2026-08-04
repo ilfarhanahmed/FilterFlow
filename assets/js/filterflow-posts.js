@@ -253,13 +253,26 @@
 		}
 
 		bindEvents() {
-			// Capture-phase handling prevents themes, page builders, and nested icon
-			// elements from swallowing clicks in compact responsive layouts.
-			this.root.addEventListener('click', (event) => this.handleClick(event), true);
+			// Keep normal delegated handlers for pagination and the filter sheet.
+			// Filter chips and the More control also use a window-level capture
+			// router below so they remain interactive when themes/page builders
+			// stop click propagation in compact desktop layouts.
+			this.root.addEventListener('click', (event) => this.handleClick(event));
 			this.root.addEventListener('keydown', (event) => this.handleKeydown(event));
-			if (this.sheet) { this.sheet.addEventListener('click', (event) => this.handleClick(event), true); this.sheet.addEventListener('keydown', (event) => this.handleKeydown(event)); }
-			if (this.backdrop) { this.backdrop.addEventListener('click', (event) => this.handleClick(event), true); }
-			if (this.overflowMenu) { this.overflowMenu.addEventListener('click', (event) => this.handleClick(event), true); this.overflowMenu.addEventListener('keydown', (event) => this.handleKeydown(event)); }
+			if (this.sheet) { this.sheet.addEventListener('click', (event) => this.handleClick(event)); this.sheet.addEventListener('keydown', (event) => this.handleKeydown(event)); }
+			if (this.backdrop) { this.backdrop.addEventListener('click', (event) => this.handleClick(event)); }
+			if (this.overflowMenu) { this.overflowMenu.addEventListener('click', (event) => this.handleClick(event)); this.overflowMenu.addEventListener('keydown', (event) => this.handleKeydown(event)); }
+
+			this.pointerCandidate = null;
+			this.lastPointerActivation = null;
+			this.boundWindowControlClick = (event) => this.handleWindowControlClick(event);
+			this.boundWindowPointerDown = (event) => this.handleWindowPointerDown(event);
+			this.boundWindowPointerUp = (event) => this.handleWindowPointerUp(event);
+			this.boundWindowPointerCancel = (event) => this.handleWindowPointerCancel(event);
+			window.addEventListener('click', this.boundWindowControlClick, true);
+			window.addEventListener('pointerdown', this.boundWindowPointerDown, true);
+			window.addEventListener('pointerup', this.boundWindowPointerUp, true);
+			window.addEventListener('pointercancel', this.boundWindowPointerCancel, true);
 
 			document.addEventListener('click', (event) => {
 				const insideWidget = this.root.contains(event.target);
@@ -276,6 +289,156 @@
 			window.addEventListener('load', () => this.scheduleLayout(), { once: true });
 			if (document.fonts && document.fonts.ready) {
 				document.fonts.ready.then(() => this.scheduleLayout()).catch(() => {});
+			}
+		}
+
+		getWindowControl(event) {
+			const target = event && event.target instanceof Element ? event.target : null;
+			if (!target) {
+				return null;
+			}
+
+			return target.closest('.ffp-more-trigger, .ffp-overflow-item[data-term], .ffp-chip[data-term]');
+		}
+
+		ownsWindowControl(control) {
+			if (!control) {
+				return false;
+			}
+
+			return this.root.contains(control)
+				|| Boolean(this.overflowMenu && this.overflowMenu.contains(control));
+		}
+
+		getControlKey(control) {
+			if (!control) {
+				return '';
+			}
+			if (control.matches('.ffp-more-trigger')) {
+				return 'more';
+			}
+			return `${control.classList.contains('ffp-overflow-item') ? 'overflow' : 'chip'}:${control.dataset.term || '0'}`;
+		}
+
+		consumeControlEvent(event) {
+			if (!event) {
+				return;
+			}
+			event.__filterFlowHandled = true;
+			if (event.cancelable) {
+				event.preventDefault();
+			}
+			if (typeof event.stopImmediatePropagation === 'function') {
+				event.stopImmediatePropagation();
+			} else if (typeof event.stopPropagation === 'function') {
+				event.stopPropagation();
+			}
+		}
+
+		activateWindowControl(control, event, source = 'click') {
+			if (!this.ownsWindowControl(control)) {
+				return false;
+			}
+
+			this.consumeControlEvent(event);
+			const key = this.getControlKey(control);
+
+			if (source === 'pointer') {
+				this.lastPointerActivation = { key, at: performance.now() };
+			}
+
+			if (control.matches('.ffp-more-trigger')) {
+				this.toggleOverflow();
+				return true;
+			}
+
+			if (control.matches('.ffp-overflow-item[data-term]')) {
+				this.selectTerm(Number(control.dataset.term || 0), true);
+				this.closeOverflow();
+				return true;
+			}
+
+			if (control.matches('.ffp-chip[data-term]')) {
+				this.selectTerm(Number(control.dataset.term || 0), true);
+				return true;
+			}
+
+			return false;
+		}
+
+		handleWindowControlClick(event) {
+			if (event.__filterFlowHandled) {
+				return;
+			}
+
+			const control = this.getWindowControl(event);
+			if (!this.ownsWindowControl(control)) {
+				return;
+			}
+
+			const key = this.getControlKey(control);
+			const recentPointer = this.lastPointerActivation
+				&& this.lastPointerActivation.key === key
+				&& performance.now() - this.lastPointerActivation.at < 900;
+
+			if (recentPointer) {
+				this.consumeControlEvent(event);
+				return;
+			}
+
+			this.activateWindowControl(control, event, 'click');
+		}
+
+		handleWindowPointerDown(event) {
+			if (!event.isPrimary) {
+				return;
+			}
+
+			const control = this.getWindowControl(event);
+			if (!this.ownsWindowControl(control)) {
+				return;
+			}
+
+			this.pointerCandidate = {
+				pointerId: event.pointerId,
+				control,
+				x: event.clientX,
+				y: event.clientY,
+				at: performance.now()
+			};
+		}
+
+		handleWindowPointerUp(event) {
+			const candidate = this.pointerCandidate;
+			this.pointerCandidate = null;
+
+			if (!candidate || candidate.pointerId !== event.pointerId || !this.ownsWindowControl(candidate.control)) {
+				return;
+			}
+
+			const distance = Math.hypot(event.clientX - candidate.x, event.clientY - candidate.y);
+			const elapsed = performance.now() - candidate.at;
+
+			// Treat a short stationary pointer gesture as a tap/click. A genuine
+			// horizontal swipe exceeds this threshold and remains scroll-only.
+			if (distance <= 10 && elapsed <= 1000) {
+				this.activateWindowControl(candidate.control, event, 'pointer');
+			}
+		}
+
+		handleWindowPointerCancel(event) {
+			if (this.pointerCandidate && this.pointerCandidate.pointerId === event.pointerId) {
+				this.pointerCandidate = null;
+			}
+		}
+
+		unbindWindowControlEvents() {
+			if (this.boundWindowControlClick) {
+				window.removeEventListener('click', this.boundWindowControlClick, true);
+				window.removeEventListener('pointerdown', this.boundWindowPointerDown, true);
+				window.removeEventListener('pointerup', this.boundWindowPointerUp, true);
+				window.removeEventListener('pointercancel', this.boundWindowPointerCancel, true);
+				this.boundWindowControlClick = null;
 			}
 		}
 
@@ -301,6 +464,7 @@
 
 		scheduleLayout() {
 			if (!this.root.isConnected) {
+				this.unbindWindowControlEvents();
 				if (this.resizeObserver) {
 					this.resizeObserver.disconnect();
 				}
@@ -351,6 +515,10 @@
 		}
 
 		handleClick(event) {
+			if (event.__filterFlowHandled) {
+				return;
+			}
+
 			const chip = event.target.closest('.ffp-chip[data-term]');
 			if (chip && this.root.contains(chip)) {
 				event.preventDefault();

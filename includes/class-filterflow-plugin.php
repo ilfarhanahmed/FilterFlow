@@ -38,18 +38,19 @@ final class Plugin {
 	}
 
 	public function register_assets(): void {
+		$asset_version = FILTERFLOW_POSTS_VERSION . '-' . FILTERFLOW_POSTS_BUILD;
 		wp_register_style(
 			'filterflow-posts',
 			FILTERFLOW_POSTS_URL . 'assets/css/filterflow-posts.css',
 			array(),
-			FILTERFLOW_POSTS_VERSION
+			$asset_version
 		);
 
 		wp_register_script(
 			'filterflow-posts',
 			FILTERFLOW_POSTS_URL . 'assets/js/filterflow-posts.js',
 			array(),
-			FILTERFLOW_POSTS_VERSION,
+			$asset_version,
 			true
 		);
 

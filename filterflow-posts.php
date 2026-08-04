@@ -22,6 +22,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 define( 'FILTERFLOW_POSTS_VERSION', '1.0.0' );
+// Internal build identifier used only for asset cache busting.
+define( 'FILTERFLOW_POSTS_BUILD', '20260804.1410' );
 define( 'FILTERFLOW_POSTS_FILE', __FILE__ );
 define( 'FILTERFLOW_POSTS_PATH', plugin_dir_path( __FILE__ ) );
 define( 'FILTERFLOW_POSTS_URL', plugin_dir_url( __FILE__ ) );

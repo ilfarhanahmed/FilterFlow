@@ -2205,3 +2205,26 @@ body.ffp-sheet-open {
 	z-index: 3;
 	pointer-events: auto !important;
 }
+
+/* Reliable compact-width interaction across desktop browsers and page builders. */
+.ffp-widget .ffp-chip,
+.ffp-widget .ffp-more-trigger,
+.ffp-overflow-menu--portal,
+.ffp-overflow-menu--portal .ffp-overflow-item {
+	pointer-events: auto !important;
+	touch-action: manipulation;
+}
+
+.ffp-widget .ffp-mobile-quick-filters {
+	touch-action: pan-x pan-y;
+}
+
+.ffp-overflow-menu--portal {
+	display: block;
+	visibility: visible;
+	opacity: 1;
+}
+
+.ffp-overflow-menu--portal[hidden] {
+	display: none !important;
+}
